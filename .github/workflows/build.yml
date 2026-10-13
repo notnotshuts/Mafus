@@ -1,0 +1,26 @@
+name: macOS build
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run file tests
+        run: ./scripts/build.sh
+      - name: Linux persistence integration
+        run: cargo test --manifest-path core/Cargo.toml persistence::integration -- --ignored --nocapture
+      - name: Verify bundle and package
+        run: |
+          codesign --verify --deep --strict dist/Mafus.app
+          ditto -c -k --sequesterRsrc --keepParent dist/Mafus.app Mafus-macOS-arm64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mafus-macOS-arm64
+          path: Mafus-macOS-arm64.zip

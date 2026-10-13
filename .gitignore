@@ -1,0 +1,10 @@
+.DS_Store
+.build/
+core/target/
+/dist/
+*.dmg
+*.zip
+.openai/
+.codex/
+.env
+.env.*

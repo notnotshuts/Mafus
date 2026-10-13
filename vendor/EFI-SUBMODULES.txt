@@ -1,0 +1,4 @@
+uefi gnu-efi 8a45cdb08cfb9653fc5a2fb659487d04a8af4f45
+efi-ntfs gnu-efi 8a45cdb08cfb9653fc5a2fb659487d04a8af4f45
+efifs gnu-efi 8a45cdb08cfb9653fc5a2fb659487d04a8af4f45
+efifs grub d38d6a1a9b79427848976f53d474392cd29c2a71

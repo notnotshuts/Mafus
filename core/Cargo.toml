@@ -1,0 +1,12 @@
+[package]
+name = "mafus-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+plist = "1.7"
+quick-xml = "0.42"
+
+[profile.release]
+lto = true
+strip = false
