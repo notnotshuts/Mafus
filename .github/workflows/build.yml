@@ -22,8 +22,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build and run file tests
         run: ./scripts/build.sh
-      - name: Website release metadata checks
-        run: node Tests/site-check.cjs
       - name: Linux persistence integration
         run: cargo test --manifest-path core/Cargo.toml persistence::integration -- --ignored --nocapture
       - name: Verify bundle and package

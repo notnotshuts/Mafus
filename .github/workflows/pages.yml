@@ -19,6 +19,22 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - name: Install website dependencies
+        run: npm ci --prefix website
+      - name: Check and build website
+        working-directory: website
+        env:
+          NEXT_PUBLIC_BASE_PATH: /Mafus
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: |
+          npm run typecheck
+          npm test
+          npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
