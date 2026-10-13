@@ -1,0 +1,68 @@
+name: Package release
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful macOS build run for this exact commit
+        required: true
+        type: string
+permissions:
+  contents: write
+  actions: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BUILD_RUN_ID: ${{ inputs.build_run_id }}
+      EXPECTED_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require successful builds for this source
+        run: |
+          gh api "repos/$GH_REPO/actions/runs/$BUILD_RUN_ID" > /tmp/build-run.json
+          python3 - <<'PY'
+          import json, os
+          run = json.load(open('/tmp/build-run.json'))
+          assert run['name'] == 'macOS build'
+          assert run['status'] == 'completed' and run['conclusion'] == 'success'
+          assert run['head_sha'] == os.environ['EXPECTED_SHA']
+          assert run['head_repository']['full_name'] == os.environ['GH_REPO']
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.build_run_id }}
+          path: artifacts
+      - name: Package and validate archives
+        run: |
+          VERSION=$(python3 -c 'import plistlib; print(plistlib.load(open("scripts/Info.plist", "rb"))["CFBundleShortVersionString"])')
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          mkdir release
+          for ARCH in arm64 x86_64; do
+            mv "artifacts/Mafus-macOS-$ARCH/Mafus-macOS-$ARCH.zip" "release/Mafus-$VERSION-macOS-$ARCH.zip"
+          done
+          git archive --format=zip --prefix=Mafus/ HEAD -o "release/Mafus-$VERSION-source.zip"
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          for path in Path('release').glob('*.zip'):
+              with zipfile.ZipFile(path) as archive:
+                  assert archive.testzip() is None, path
+                  if '-macOS-' in path.name:
+                      assert 'Mafus.app/Contents/Resources/Translations/en.json' in archive.namelist()
+                      assert 'Mafus.app/Contents/MacOS/mafus-core' in archive.namelist()
+          PY
+          (cd release && sha256sum *.zip > SHA256SUMS.txt)
+      - name: Create or update unpublished draft
+        run: |
+          TAG="v$VERSION"
+          if gh release view "$TAG" --json isDraft --jq .isDraft > /tmp/release-draft; then
+            test "$(cat /tmp/release-draft)" = true
+            gh release upload "$TAG" release/* --clobber
+            gh release edit "$TAG" --notes-file "docs/releases/$VERSION.md"
+          else
+            gh release create "$TAG" release/* --verify-tag --draft --title "Mafus $VERSION" --notes-file "docs/releases/$VERSION.md"
+          fi
