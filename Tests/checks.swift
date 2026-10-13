@@ -1,6 +1,10 @@
 import Foundation
 @main struct Checks {
     static func main() throws {
+        Localization.shared.language = "ru"
+        precondition(L("Missing {0} / {1}", "{1}", "value") == "Missing {1} / value", "Localization modified substituted user input")
+        Localization.shared.language = "system"
+        precondition(Localization.languages.count > 20)
         let literal = "a'$(printf injected)\\\" space\nline"
         let result = try runCommand("/bin/sh", ["-c", "printf '%s' " + shellQuote(literal)])
         precondition(result.code == 0 && String(decoding: result.data, as: UTF8.self) == literal, "Shell quoting changed input")

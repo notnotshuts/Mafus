@@ -1,11 +1,12 @@
 #!/bin/zsh
 set -euo pipefail
 cd "$(dirname "$0")/.."
+architecture=$(uname -m)
 version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' scripts/Info.plist)
 release_dir="${1:-$PWD/../Mafus-release-$version}"
 mkdir -p "$release_dir"
 /usr/bin/codesign --verify --deep --strict dist/Mafus.app
-/usr/bin/ditto -c -k --sequesterRsrc --keepParent dist/Mafus.app "$release_dir/Mafus-$version-macOS-arm64.zip"
+/usr/bin/ditto -c -k --sequesterRsrc --keepParent dist/Mafus.app "$release_dir/Mafus-$version-macOS-$architecture.zip"
 python3 - "$version" "$release_dir" <<'PY'
 from pathlib import Path
 import sys,zipfile,hashlib

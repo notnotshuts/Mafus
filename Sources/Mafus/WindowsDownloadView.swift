@@ -11,16 +11,16 @@ struct WindowsDownloadView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Windows 11 ISO").font(.headline)
-                    Text("Выберите выпуск и язык на официальном сайте Microsoft").font(.caption).foregroundStyle(.secondary)
+                    Text(L("Выберите выпуск и язык на официальном сайте Microsoft")).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Закрыть") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(L("Закрыть")) { dismiss() }.keyboardShortcut(.cancelAction)
             }.padding(18)
             Divider()
             if let webError { Text(webError).font(.caption).foregroundStyle(.red).padding(12) }
             MicrosoftDownloadPage(architecture: architecture, onDownload: { url in dismiss(); onDownload(url) }, onError: { webError = $0 })
             Divider()
-            Label("ISO скачивается в Mafus после выбора ссылки Microsoft", systemImage: "lock.shield").font(.caption).foregroundStyle(.secondary).padding(12)
+            Label(L("ISO скачивается в Mafus после выбора ссылки Microsoft"), systemImage: "lock.shield").font(.caption).foregroundStyle(.secondary).padding(12)
         }.frame(width: 900, height: 700)
     }
 }

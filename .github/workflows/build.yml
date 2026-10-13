@@ -8,19 +8,29 @@ permissions:
   contents: read
 jobs:
   build:
-    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-26
+            architecture: arm64
+          - runner: macos-26-intel
+            architecture: x86_64
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - name: Build and run file tests
         run: ./scripts/build.sh
+      - name: Website release metadata checks
+        run: node Tests/site-check.cjs
       - name: Linux persistence integration
         run: cargo test --manifest-path core/Cargo.toml persistence::integration -- --ignored --nocapture
       - name: Verify bundle and package
         run: |
           codesign --verify --deep --strict dist/Mafus.app
-          ditto -c -k --sequesterRsrc --keepParent dist/Mafus.app Mafus-macOS-arm64.zip
+          ditto -c -k --sequesterRsrc --keepParent dist/Mafus.app Mafus-macOS-${{ matrix.architecture }}.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: Mafus-macOS-arm64
-          path: Mafus-macOS-arm64.zip
+          name: Mafus-macOS-${{ matrix.architecture }}
+          path: Mafus-macOS-${{ matrix.architecture }}.zip

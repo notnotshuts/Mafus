@@ -18,7 +18,7 @@ struct WindowsOptions {
     var customAnswer: URL?
     var enabled: Bool { bypassHardware || localAccount || privacy || disableEncryption || !locale.isEmpty || !timeZone.isEmpty || removeTeams || removeOutlook || disableCopilot || disableOneDrive || qualityOfLife || applySkuPolicy }
     func answer() throws -> String {
-        if localAccount && (username.isEmpty || username.count > 20 || username.contains(where: { "/\\[]:;|=,+*?<>@\"".contains($0) })) { throw MafusError.message("Некорректное имя локального пользователя Windows.") }
+        if localAccount && (username.isEmpty || username.count > 20 || username.contains(where: { "/\\[]:;|=,+*?<>@\"".contains($0) })) { throw MafusError.message(L("Некорректное имя локального пользователя Windows.")) }
         func component(_ name: String, _ body: String) -> String {
             "<component name=\"\(name)\" processorArchitecture=\"MAFUS_ARCH\" publicKeyToken=\"31bf3856ad364e35\" language=\"neutral\" versionScope=\"nonSxS\">\(body)</component>"
         }

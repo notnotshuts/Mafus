@@ -17,7 +17,7 @@ enum DiskService {
                   let size = info["TotalSize"] as? Int64, size > 0 else { return nil }
             let attachment = DeviceRegistry.attachmentID(id)
             guard attachment != 0 else { return nil }
-            return USBDrive(id: id, name: info["MediaName"] as? String ?? "USB-накопитель", size: size, attachmentID: attachment)
+            return USBDrive(id: id, name: info["MediaName"] as? String ?? L("USB-накопитель"), size: size, attachmentID: attachment)
         }
     }
 }

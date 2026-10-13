@@ -1,0 +1,12 @@
+const assert = require('node:assert/strict');
+const {validRelease,releaseAsset} = require('../website/dist/app.js');
+const release = {tag_name:'v0.2.0',html_url:'https://github.com/notnotshuts/Mafus/releases/tag/v0.2.0',draft:false,prerelease:false,assets:[{name:'Mafus-0.2.0-macOS-x86_64.zip',browser_download_url:'https://github.com/notnotshuts/Mafus/releases/download/v0.2.0/Mafus-0.2.0-macOS-x86_64.zip',size:1024}]};
+assert(validRelease(release));
+assert.equal(releaseAsset(release,'x86_64').size,1024);
+assert.equal(releaseAsset(release,'arm64'),undefined);
+assert(!validRelease({...release,draft:true}));
+assert(!validRelease({...release,prerelease:true}));
+assert(!validRelease({...release,html_url:'https://unrelated.example/'}));
+assert.equal(releaseAsset({...release,assets:[{...release.assets[0],browser_download_url:'javascript:alert(1)'}]},'x86_64'),undefined);
+assert.equal(releaseAsset({...release,assets:[{...release.assets[0],size:0}]},'x86_64'),undefined);
+console.log('Site checks passed: stable releases, architectures, absent assets, URL validation');

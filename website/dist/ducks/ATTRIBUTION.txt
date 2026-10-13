@@ -1,0 +1,7 @@
+Duck / Utya animations from the official Telegram Android client.
+Source: https://github.com/DrKLO/Telegram
+Original resources: TMessagesProj/src/main/res/raw/utyan_draw.json and utyan_saved_messages.json
+GIF derivatives are rendered at 256px / 20fps from the adjacent original JSON files.
+The upstream Telegram Android repository is distributed under GPL-2.0; its license is included in TELEGRAM-LICENSE.txt. These third-party resources retain their upstream attribution and are separate from the Mafus logo.
+Sticker set: https://t.me/addstickers/UtyaDuck
+Mafus is an independent project and is not endorsed by Telegram.

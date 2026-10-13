@@ -23,3 +23,7 @@ EFI projects use gnu-efi, and EfiFs uses GRUB as submodules. Exact upstream subm
 FreeDOS is downloaded on demand from https://download.freedos.org/1.4/FD14-LiteUSB.zip and checked against the project's published SHA-256. No FreeDOS or Microsoft DOS system files are embedded in Mafus. MS-DOS requires a bootable image supplied by the user.
 
 Mafus generates its own Windows customization scripts and unattended XML. Windows customization behavior was checked against Microsoft unattended documentation and Rufus's feature descriptions; the Rufus source is not compiled into the application. The ms-sys boot resources are compiled data from GPL-2.0-or-later source, retained in the source package.
+
+## Website Duck / Utya
+
+GIF derivatives and original Lottie JSON are in `website/dist/ducks`. They come from the official Telegram Android repository (`DrKLO/Telegram`), distributed under GPL-2.0. Upstream attribution and license are included alongside the assets; the Mafus logo remains separate. See [attribution](website/dist/ducks/ATTRIBUTION.txt).

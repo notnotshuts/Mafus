@@ -2,25 +2,35 @@
 <h1 align="center">Mafus</h1>
 <p align="center">Загрузочный USB. С вашего Mac.</p>
 <p align="center">
-<a href="https://github.com/notnotshuts/Mafus/releases/tag/v0.1.0"><img alt="Release 0.1.0" src="https://img.shields.io/badge/release-0.1.0-6158ef"></a>
+<a href="https://github.com/notnotshuts/Mafus/releases/tag/v0.2.0"><img alt="Release 0.2.0" src="https://img.shields.io/badge/release-0.2.0-6158ef"></a>
 <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-222222">
-<img alt="Apple Silicon" src="https://img.shields.io/badge/Apple-Silicon-222222">
+<img alt="Apple Silicon and Intel" src="https://img.shields.io/badge/Mac-Apple_Silicon_%26_Intel-222222">
 <a href="LICENSE"><img alt="GPL 3 or later" src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue"></a>
 </p>
 <p align="center"><a href="https://notnotshuts.github.io/Mafus/">Сайт</a> · <a href="https://github.com/notnotshuts/Mafus/releases/latest">Скачать</a> · <a href="docs/USAGE.ru.md">Руководство</a> · <a href="FUNCTIONALITY.md">Совместимость</a></p>
 
 Mafus — нативное приложение для создания загрузочных USB на macOS. Интерфейс на **SwiftUI**, запись и подготовка образов — на **Rust**. Liquid Glass на macOS 26+, системные материалы на macOS 14–15. Windows-компьютер для подготовки USB не нужен.
 
-**0.1.0 — первый экспериментальный релиз.** Сборка и файловые интеграционные тесты пройдены. Форматирование физического USB, загрузка ПК, Windows Setup и сохранение Linux-сессии после реальной перезагрузки пока не проверены. Это не полный функциональный эквивалент Rufus.
+**0.2.0 — экспериментальный релиз.** Сборка и файловые интеграционные тесты пройдены. Форматирование физического USB, загрузка ПК, Windows Setup и сохранение Linux-сессии после реальной перезагрузки пока не проверены. Это не полный функциональный эквивалент Rufus.
 
 ## Скачать и запустить
 
-1. Скачайте [Mafus-0.1.0-macOS-arm64.zip](https://github.com/notnotshuts/Mafus/releases/download/v0.1.0/Mafus-0.1.0-macOS-arm64.zip).
+1. Скачайте сборку для **Apple Silicon (arm64)** или **Intel (x86_64)** со [страницы последнего релиза](https://github.com/notnotshuts/Mafus/releases/latest).
 2. Распакуйте и переместите **Mafus.app** в «Программы».
 3. Откройте приложение, выберите образ и внешнее USB-устройство.
 4. Проверьте устройство в подтверждении стирания и запустите запись.
 
-Пакет предназначен для **Apple Silicon, macOS 14+**. Подпись локальная (ad hoc); Developer ID и notarization в этом релизе отсутствуют, поэтому Gatekeeper может ограничить запуск. Не отключайте защиту системы целиком. Все необходимые утилиты включены в `.app`; Homebrew и FUSE для работы не нужны.
+Пакеты предназначены для **Apple Silicon и Intel, macOS 14+**. Подпись локальная (ad hoc); Developer ID и notarization в этом релизе отсутствуют, поэтому Gatekeeper может ограничить запуск. Не отключайте защиту системы целиком. Все необходимые утилиты включены в `.app`; Homebrew и FUSE для работы не нужны.
+
+## Новое в 0.2.0
+
+- 24 языка: язык системы или выбор в «Параметры → Запись». Переключение без перезапуска.
+- Отдельные нативные сборки для Apple Silicon и Intel со всеми вспомогательными утилитами.
+- Плавные переходы в интерфейсе, анимация поиска USB; учитывается системное уменьшение движения.
+- Настройки и операции разделены на небольшие компоненты; список USB обновляется после записи.
+- Короткий сайт с тёмной и светлой темами, Duck/Utya и автоматическими ссылками на GitHub Releases.
+
+Системные диалоги используют язык macOS. Технические сообщения внешних утилит и исходные данные Windows-образов сохраняются в оригинале. Переводы подготовлены машинно и отредактированы частично; поправки носителей языка приветствуются. [Как улучшить перевод](docs/LOCALIZATION.md).
 
 ## Возможности
 

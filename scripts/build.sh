@@ -16,12 +16,16 @@ python3 Tests/wimlib-check.py .build/vendor/wimlib-1.14.4/wimlib-imagex
 cargo test --manifest-path core/Cargo.toml
 cargo build --release --manifest-path core/Cargo.toml
 swift build --disable-sandbox --cache-path "$PWD/.build/cache" -c release
-swiftc Sources/Mafus/Models.swift Sources/Mafus/WindowsOptions.swift Sources/Mafus/Utilities.swift Sources/Mafus/DownloadCatalog.swift Tests/checks.swift -o .build/mafus-checks
+swiftc Sources/Mafus/Localization.swift Sources/Mafus/Models.swift Sources/Mafus/WindowsOptions.swift Sources/Mafus/Utilities.swift Sources/Mafus/DownloadCatalog.swift Tests/checks.swift -o .build/mafus-checks
 .build/mafus-checks
 bin_dir=$(swift build --disable-sandbox --cache-path "$PWD/.build/cache" -c release --show-bin-path)
 app="dist/Mafus.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin_dir/Mafus" "$app/Contents/MacOS/Mafus"
+# Install resources in the standard app location; development uses Bundle.module.
+rm -rf "$app/Contents/MacOS/Mafus_Mafus.bundle"
+cp -R Sources/Mafus/Resources/Translations "$app/Contents/Resources/"
+python3 scripts/check-localizations.py
 cp core/target/release/mafus-core "$app/Contents/MacOS/mafus-core"
 cp .build/vendor/wimlib-1.14.4/wimlib-imagex "$app/Contents/MacOS/wimlib-imagex"
 mkdir -p "$app/Contents/Resources/ThirdParty"
@@ -54,4 +58,5 @@ done
 python3 scripts/make-icon.py "$iconset" "$app/Contents/Resources/Mafus.icns"
 /usr/bin/codesign --force --sign - "$app/Contents/MacOS/mafus-core"
 /usr/bin/codesign --force --sign - "$app"
+python3 scripts/verify-bundle.py
 print "Built: $PWD/$app"

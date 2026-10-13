@@ -12,7 +12,7 @@ struct USBDrive: Identifiable, Hashable, Sendable {
 enum WriteMode: String, CaseIterable, Identifiable, Sendable {
     case automatic = "auto", windows, linux, dos
     var id: String { rawValue }
-    var title: String { switch self { case .automatic: return "Автоматически"; case .windows: return "Windows · установка"; case .linux: return "Linux · прямая запись"; case .dos: return "DOS · BIOS / CSM" } }
+    var title: String { switch self { case .automatic: return L("Автоматически"); case .windows: return L("Windows · установка"); case .linux: return L("Linux · прямая запись"); case .dos: return "DOS · BIOS / CSM" } }
 }
 
 struct ImageFile: Sendable {
@@ -20,10 +20,10 @@ struct ImageFile: Sendable {
     let size: Int64
     var capacity: String { ByteCountFormatter.string(fromByteCount: size, countStyle: .file) }
     init(url: URL) throws {
-        guard ["iso", "img", "vhd", "gz", "bz2", "xz", "zst", "zip"].contains(url.pathExtension.lowercased()) else { throw MafusError.message("Выберите ISO, IMG, фиксированный VHD, ZIP с образом или сжатый ISO / IMG.") }
+        guard ["iso", "img", "vhd", "gz", "bz2", "xz", "zst", "zip"].contains(url.pathExtension.lowercased()) else { throw MafusError.message(L("Выберите ISO, IMG, фиксированный VHD, ZIP с образом или сжатый ISO / IMG.")) }
         let values = try FileManager.default.attributesOfItem(atPath: url.path)
         guard values[.type] as? FileAttributeType == .typeRegular, let size = values[.size] as? Int64, size > 0, (["gz", "bz2", "xz", "zst", "zip"].contains(url.pathExtension.lowercased()) || size % 512 == 0) else {
-            throw MafusError.message("Образ должен быть обычным непустым файлом, размер которого кратен 512 байтам.")
+            throw MafusError.message(L("Образ должен быть обычным непустым файлом, размер которого кратен 512 байтам."))
         }
         self.url = url
         self.size = url.pathExtension.lowercased() == "vhd" ? max(0, size - 512) : size
