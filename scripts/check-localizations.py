@@ -12,4 +12,9 @@ for path in root.glob('*.json'):
     for key, value in table.items():
         assert value.strip(), (path.name, key)
         assert sorted(re.findall(r'\{\d+\}', key)) == sorted(re.findall(r'\{\d+\}', value)), (path.name, key, value)
+source = root.parents[1]
+for path in source.glob('*.swift'):
+    for literal in re.findall(r'L\("((?:\\.|[^"\\])*)"', path.read_text()):
+        key = json.loads('"' + literal + '"')
+        assert key in base, f'{path.name}: uncatalogued message {key}'
 print(f'Validated {len(base)} messages in {len(expected)} languages')
