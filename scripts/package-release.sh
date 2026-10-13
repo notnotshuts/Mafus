@@ -9,12 +9,13 @@ mkdir -p "$release_dir"
 /usr/bin/ditto -c -k --sequesterRsrc --keepParent dist/Mafus.app "$release_dir/Mafus-$version-macOS-$architecture.zip"
 python3 - "$version" "$release_dir" <<'PY'
 from pathlib import Path
-import sys,zipfile,hashlib
+import sys,zipfile,hashlib,subprocess
 root=Path.cwd();version=sys.argv[1];destination=Path(sys.argv[2])
 with zipfile.ZipFile(destination/f'Mafus-{version}-source.zip','w',zipfile.ZIP_DEFLATED) as archive:
- for path in sorted(root.rglob('*')):
-  rel=path.relative_to(root)
-  if not path.is_file() or any(part in {'.git','.build','target','dist','.DS_Store','.openai'} for part in rel.parts) and not rel.parts[:2]==('website','dist'):continue
+ paths=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z']).decode().split('\0')
+ for name in sorted(filter(None,paths)):
+  rel=Path(name);path=root/rel
+  if not path.is_file() or path.is_symlink():continue
   archive.write(path,Path('Mafus')/rel)
 files=sorted(destination.glob('*.zip'))
 (destination/'SHA256SUMS.txt').write_text('\n'.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name for p in files)+'\n')

@@ -26,4 +26,4 @@ Mafus generates its own Windows customization scripts and unattended XML. Window
 
 ## Website Duck / Utya
 
-GIF derivatives and original Lottie JSON are in `website/dist/ducks`. They come from the official Telegram Android repository (`DrKLO/Telegram`), distributed under GPL-2.0. Upstream attribution and license are included alongside the assets; the Mafus logo remains separate. See [attribution](website/dist/ducks/ATTRIBUTION.txt).
+GIF derivatives and original Lottie JSON are in `website/public/ducks`. They come from the official Telegram Android repository (`DrKLO/Telegram`), distributed under GPL-2.0. Upstream attribution and license are included alongside the assets; the Mafus logo remains separate. See [attribution](website/public/ducks/ATTRIBUTION.txt).
