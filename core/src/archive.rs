@@ -131,7 +131,7 @@ pub fn extract(
         if total != declared as u64 {
             return Err("Truncated ZIP payload".into());
         }
-        file.sync_all()?;
+        crate::disk_io::sync(&file)?;
         result = Some(path);
     }
     Ok((result.ok_or("ZIP contains no image")?, workspace))

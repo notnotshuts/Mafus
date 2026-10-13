@@ -109,7 +109,7 @@ pub fn prepare_reporting(
         if !child.wait()?.success() {
             return Err("Compressed image is corrupt or could not be expanded".into());
         }
-        destination.sync_all()?;
+        crate::disk_io::sync(&destination)?;
         Ok(())
     })();
     if result.is_err() {

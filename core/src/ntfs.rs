@@ -116,7 +116,7 @@ fn prepare(
         volume.read_exact(&mut boot)?;
         volume.seek(SeekFrom::Start((sectors - 1) * 512))?;
         volume.write_all(&boot)?;
-        volume.sync_all()?;
+        crate::disk_io::sync(&volume)?;
     }
     let path = workspace.path.join("windows.img");
     let mut disk = OpenOptions::new()
@@ -148,7 +148,7 @@ fn prepare(
     }
     disk.seek(SeekFrom::Start(fat_offset))?;
     disk.write_all(&fat)?;
-    disk.sync_all()?;
+    crate::disk_io::sync(&disk)?;
     disk.seek(SeekFrom::Start(0))?;
 
     Ok((disk, workspace))

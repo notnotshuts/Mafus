@@ -1,7 +1,7 @@
 use super::*;
 use std::{
     collections::HashSet,
-    os::unix::fs::DirBuilderExt,
+    os::unix::fs::{DirBuilderExt, MetadataExt},
     time::{SystemTime, UNIX_EPOCH},
 };
 const FAT_MAX: u64 = 0xffff_ffff;
@@ -366,14 +366,112 @@ pub fn target_partition(options: &Options) -> Result<String> {
     }
     Ok(format!("/dev/{id}"))
 }
-fn target_mount(options: &Options) -> Result<PathBuf> {
-    let partition = target_partition(options)?;
-    let metadata = info(&partition)?;
-    let mount = text(&metadata, "MountPoint");
-    if !mount.starts_with("/Volumes/") || !Path::new(mount).is_dir() {
-        return Err("USB was not mounted".into());
+pub(crate) fn ensure_target_mounted(options: &Options, progress: &mut Progress) -> Result<PathBuf> {
+    let identity = validate(options)?;
+    let start = Instant::now();
+    let mut last_detail = String::new();
+    let result = wait_for_mount(
+        40,
+        || {
+            progress.update("format", 0, 0, start)?;
+            // Recheck physical USB identity before every attempt, including mount requests.
+            if validate(options)? != identity {
+                return Err("USB changed while waiting for its formatted volume".into());
+            }
+            let partition = match target_partition(options) {
+                Ok(partition) => partition,
+                Err(error) => {
+                    last_detail = error.to_string();
+                    return Ok(None);
+                }
+            };
+            let metadata = match info(&partition) {
+                Ok(metadata) => metadata,
+                Err(error) => {
+                    last_detail = error.to_string();
+                    return Ok(None);
+                }
+            };
+            let mount = text(&metadata, "MountPoint");
+            if mount.starts_with("/Volumes/") && Path::new(mount).is_dir() {
+                return Ok(Some(PathBuf::from(mount)));
+            }
+            let output = Command::new("/usr/sbin/diskutil")
+                .args(["mount", &partition])
+                .output()?;
+            if !output.status.success() {
+                last_detail = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+            }
+            // Mount completion and Disk Arbitration metadata may arrive asynchronously.
+            Ok(None)
+        },
+        || std::thread::sleep(std::time::Duration::from_millis(250)),
+    );
+    result.map_err(|error| {
+        if last_detail.is_empty() {
+            error
+        } else {
+            format!("{error}: {last_detail}").into()
+        }
+    })
+}
+
+fn wait_for_mount<T>(
+    attempts: usize,
+    mut probe: impl FnMut() -> Result<Option<T>>,
+    mut pause: impl FnMut(),
+) -> Result<T> {
+    for attempt in 0..attempts {
+        if let Some(mount) = probe()? {
+            return Ok(mount);
+        }
+        if attempt + 1 < attempts {
+            pause();
+        }
     }
-    Ok(mount.into())
+    Err("Formatted USB did not mount in time; no Windows files were copied".into())
+}
+
+// Hold the formatted volume open through copying and verification. This prevents a
+// normal unmount and detects a vanished/replaced mount point before creating paths.
+struct MountedTarget {
+    path: PathBuf,
+    root: File,
+}
+impl MountedTarget {
+    fn open(path: &Path) -> io::Result<Self> {
+        if !fs::symlink_metadata(path)?.is_dir() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "USB mount point is not a directory",
+            ));
+        }
+        Ok(Self {
+            path: path.to_owned(),
+            root: File::open(path)?,
+        })
+    }
+    fn check(&self) -> io::Result<()> {
+        let current = fs::symlink_metadata(&self.path)?;
+        let original = self.root.metadata()?;
+        if !current.is_dir() || current.dev() != original.dev() || current.ino() != original.ino() {
+            return Err(io::Error::new(
+                io::ErrorKind::NotConnected,
+                "USB mount point changed during copying",
+            ));
+        }
+        Ok(())
+    }
+    fn check_file(&self, file: &File) -> io::Result<()> {
+        self.check()?;
+        if file.metadata()?.dev() != self.root.metadata()?.dev() {
+            return Err(io::Error::new(
+                io::ErrorKind::NotConnected,
+                "Destination is no longer on the USB volume",
+            ));
+        }
+        Ok(())
+    }
 }
 
 pub fn write_windows(
@@ -511,11 +609,13 @@ pub fn write_windows(
     if validate(options)? != identity {
         return Err("USB changed after formatting".into());
     }
-    let mount = target_mount(options)?;
+    let mount_path = ensure_target_mounted(options, progress)?;
+    let mount = MountedTarget::open(&mount_path)?;
     copy_files(&plan.files, &mount, plan.total, progress)?;
     if options.verify {
         verify_files(&plan.files, &mount, plan.total, progress)?;
     }
+    drop(mount); // Release our volume handle before the final safe unmount.
     let output = Command::new("/usr/sbin/diskutil")
         .args(["unmountDisk", &options.device])
         .output()?;
@@ -524,11 +624,17 @@ pub fn write_windows(
     }
     Ok(())
 }
-fn copy_files(files: &[Entry], mount: &Path, total: u64, progress: &mut Progress) -> Result<()> {
+fn copy_files(
+    files: &[Entry],
+    mount: &MountedTarget,
+    total: u64,
+    progress: &mut Progress,
+) -> Result<()> {
     let start = Instant::now();
     let mut done = 0;
     for entry in files {
-        let target = mount.join(&entry.relative);
+        mount.check()?;
+        let target = mount.path.join(&entry.relative);
         fs::create_dir_all(target.parent().ok_or("Invalid destination")?)?;
         let mut input = File::open(&entry.source)?;
         let mut output = OpenOptions::new()
@@ -536,24 +642,34 @@ fn copy_files(files: &[Entry], mount: &Path, total: u64, progress: &mut Progress
             .create_new(true)
             .custom_flags(0x100)
             .open(&target)?;
+        mount.check_file(&output)?;
         copy_image(&mut input, &mut output, entry.size, |count| {
+            mount.check()?;
             progress.update("copy", done + count, total, start)
         })?;
         done += entry.size;
     }
     Ok(())
 }
-fn verify_files(files: &[Entry], mount: &Path, total: u64, progress: &mut Progress) -> Result<()> {
+fn verify_files(
+    files: &[Entry],
+    mount: &MountedTarget,
+    total: u64,
+    progress: &mut Progress,
+) -> Result<()> {
     let start = Instant::now();
     let mut done = 0;
     for entry in files {
         let mut input = File::open(&entry.source)?;
-        let mut actual = File::open(mount.join(&entry.relative))?;
+        mount.check()?;
+        let mut actual = File::open(mount.path.join(&entry.relative))?;
+        mount.check_file(&actual)?;
         if actual.metadata()?.len() != entry.size {
             return Err("Copied Windows file has incorrect size".into());
         }
         disable_cache(&actual)?;
         verify_image(&mut input, &mut actual, entry.size, |count| {
+            mount.check()?;
             progress.update("verify", done + count, total, start)
         })?;
         done += entry.size;
@@ -564,6 +680,57 @@ fn verify_files(files: &[Entry], mount: &Path, total: u64, progress: &mut Progre
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn waits_for_formatted_volume_and_stops_on_disconnect() -> Result<()> {
+        let mut checks = 0;
+        let mount = wait_for_mount(
+            4,
+            || {
+                checks += 1;
+                Ok(if checks == 3 {
+                    Some(PathBuf::from("/Volumes/MAFUS"))
+                } else {
+                    None
+                })
+            },
+            || {},
+        )?;
+        assert_eq!(checks, 3);
+        assert_eq!(mount, PathBuf::from("/Volumes/MAFUS"));
+        let mut checks = 0;
+        let result: Result<PathBuf> = wait_for_mount(
+            4,
+            || {
+                checks += 1;
+                Err("USB unplugged".into())
+            },
+            || panic!("Do not retry a disconnected USB"),
+        );
+        assert!(result.unwrap_err().to_string().contains("USB unplugged"));
+        assert_eq!(checks, 1);
+        let result: Result<PathBuf> = wait_for_mount(2, || Ok(None), || {});
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("no Windows files were copied"));
+        Ok(())
+    }
+    #[test]
+    fn disappeared_mount_is_not_recreated_as_a_local_folder() -> Result<()> {
+        let temp = Workspace::new()?;
+        let path = temp.path.join("volume");
+        fs::create_dir(&path)?;
+        let mounted = MountedTarget::open(&path)?;
+        fs::rename(&path, temp.path.join("removed-volume"))?;
+        assert!(mounted.check().is_err());
+        assert!(!path.exists());
+        fs::create_dir(&path)?;
+        assert!(
+            mounted.check().is_err(),
+            "A different directory must not replace the USB mount"
+        );
+        Ok(())
+    }
     #[test]
     fn rejects_symlinks_and_case_collisions() -> Result<()> {
         let temp = Workspace::new()?;
@@ -594,10 +761,11 @@ mod tests {
             SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
         ));
         let mut progress = Progress::new(&log)?;
-        copy_files(&files, &dest, total, &mut progress)?;
-        verify_files(&files, &dest, total, &mut progress)?;
+        let mounted = MountedTarget::open(&dest)?;
+        copy_files(&files, &mounted, total, &mut progress)?;
+        verify_files(&files, &mounted, total, &mut progress)?;
         fs::write(dest.join("setup.exe"), b"bad fixture!!")?;
-        assert!(verify_files(&files, &dest, total, &mut progress).is_err());
+        assert!(verify_files(&files, &mounted, total, &mut progress).is_err());
         Ok(())
     }
 }

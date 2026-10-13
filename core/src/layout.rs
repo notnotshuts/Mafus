@@ -207,7 +207,7 @@ pub fn relocate_gpt(file: &mut File, size: u64) -> Result<()> {
         }
     }
     at(file, 0, &mbr)?;
-    file.sync_all()?;
+    crate::disk_io::sync(&file)?;
     Ok(())
 }
 #[cfg(test)]

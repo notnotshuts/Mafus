@@ -1,4 +1,5 @@
 mod archive;
+mod disk_io;
 mod image;
 mod layout;
 mod ntfs;
@@ -270,7 +271,7 @@ fn copy_image(
         done += count as u64;
         report(done)?;
     }
-    destination.sync_all()?;
+    crate::disk_io::sync(&destination)?;
     Ok(())
 }
 fn verify_image(
@@ -331,7 +332,7 @@ fn copy_raw_image(
         report(done)?;
     }
     if !verify {
-        destination.sync_all()?;
+        crate::disk_io::sync(&destination)?;
     }
     Ok(())
 }

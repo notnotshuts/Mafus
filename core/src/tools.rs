@@ -30,12 +30,16 @@ pub fn format(options: &Options, progress: &mut Progress) -> Result<()> {
         if validate(options)? != identity {
             return Err("Disk identity changed after format".into());
         }
+        windows::ensure_target_mounted(options, progress)?;
         let partition = windows::target_partition(options)?;
         let output = Command::new("/usr/sbin/diskutil")
             .args(["unmount", &partition])
             .output()?;
         if !output.status.success() {
             return Err("Cannot unmount partition for custom cluster formatting".into());
+        }
+        if validate(options)? != identity {
+            return Err("Disk changed before custom cluster formatting".into());
         }
         let output = Command::new("/sbin/newfs_msdos")
             .args([
@@ -55,13 +59,8 @@ pub fn format(options: &Options, progress: &mut Progress) -> Result<()> {
         if !output.status.success() {
             return Err(String::from_utf8_lossy(&output.stderr).into_owned().into());
         }
-        let output = Command::new("/usr/sbin/diskutil")
-            .args(["mount", &partition])
-            .output()?;
-        if !output.status.success() {
-            return Err("Formatted volume could not be mounted".into());
-        }
     }
+    windows::ensure_target_mounted(options, progress)?;
     println!("USB formatted successfully.");
     Ok(())
 }
@@ -143,7 +142,7 @@ pub fn backup(options: &Options, progress: &mut Progress) -> Result<()> {
         if target.extension().is_some_and(|s| s == "vhd") {
             destination.seek(SeekFrom::End(0))?;
             destination.write_all(&vhd_footer(options.size)?)?;
-            destination.sync_all()?;
+            crate::disk_io::sync(&destination)?;
         }
         Ok(())
     })();
@@ -232,7 +231,7 @@ pub fn diagnostic(options: &Options, operation: &str, progress: &mut Progress) -
             progress.update(operation, done, options.size, start)?;
         }
         if operation != "read-test" {
-            disk.sync_all()?;
+            crate::disk_io::sync(&disk)?;
         }
         if operation == "bad-blocks" || (operation == "zero" && options.verify) {
             disk.seek(SeekFrom::Start(0))?;
